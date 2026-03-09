@@ -155,7 +155,7 @@ class CourseResourceIntegrationTest {
             null
         );
         
-        ResourceDTO javaResource = resourceService.createResource(javaRequest, studentUser.getId());
+        ResourceDTO javaResource = resourceService.createResource(javaRequest, null, studentUser.getId());
         assertEquals(javaCourse.getId(), javaResource.courseId());
         assertEquals("New Java Assignment", javaResource.title());
         
@@ -169,7 +169,7 @@ class CourseResourceIntegrationTest {
             null
         );
         
-        ResourceDTO mathResource = resourceService.createResource(mathRequest, studentUser.getId());
+        ResourceDTO mathResource = resourceService.createResource(mathRequest, null, studentUser.getId());
         assertEquals(mathCourse.getId(), mathResource.courseId());
         assertEquals("New Math Problem Set", mathResource.title());
     }

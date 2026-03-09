@@ -22,10 +22,9 @@ public record CreateResourceRequestDTO(
     @NotNull(message = "Resource type is required")
     ResourceType type,
     
-    @NotBlank(message = "URL is required")
     @Size(max = 2048, message = "URL must not exceed 2048 characters")
     @Pattern(
-        regexp = "^https?://.*", 
+        regexp = "^https?://.*|^$", 
         message = "URL must be a valid HTTP or HTTPS URL"
     )
     String url,
@@ -60,6 +59,18 @@ public record CreateResourceRequestDTO(
             return academicYear != null && !academicYear.isEmpty();
         }
         return true;
+    }
+    
+    /**
+     * Validates that exactly one of url or file is provided (XOR logic).
+     * 
+     * @param hasFile true if a file is provided in the request
+     * @return true if exactly one of url or file is provided
+     */
+    public boolean hasUrlOrFile(boolean hasFile) {
+        boolean hasUrl = url != null && !url.trim().isEmpty();
+        // XOR: exactly one must be true
+        return hasUrl ^ hasFile;
     }
     
     /**

@@ -128,7 +128,7 @@ public class CourseController {
         Long userId = getUserIdFromAuth(authentication);
         
         try {
-            ResourceDTO createdResource = resourceService.createResource(courseSpecificRequest, userId);
+            ResourceDTO createdResource = resourceService.createResource(courseSpecificRequest, null, userId);
             return ResponseEntity
                 .created(URI.create("/api/resources/" + createdResource.id()))
                 .body(createdResource);

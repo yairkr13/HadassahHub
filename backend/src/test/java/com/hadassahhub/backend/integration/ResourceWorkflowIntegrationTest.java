@@ -77,7 +77,7 @@ class ResourceWorkflowIntegrationTest {
             "Moed A"
         );
         
-        ResourceDTO createdResource = resourceService.createResource(uploadRequest, studentUser.getId());
+        ResourceDTO createdResource = resourceService.createResource(uploadRequest, null, studentUser.getId());
         
         assertNotNull(createdResource);
         assertEquals("Final Exam 2024 - Moed A", createdResource.title());
@@ -135,7 +135,7 @@ class ResourceWorkflowIntegrationTest {
             null
         );
         
-        ResourceDTO createdResource = resourceService.createResource(uploadRequest, studentUser.getId());
+        ResourceDTO createdResource = resourceService.createResource(uploadRequest, null, studentUser.getId());
         Long resourceId = createdResource.id();
         
         // Step 2: Admin rejects the resource
@@ -174,7 +174,7 @@ class ResourceWorkflowIntegrationTest {
             null
         );
         
-        ResourceDTO createdResource = resourceService.createResource(uploadRequest, studentUser.getId());
+        ResourceDTO createdResource = resourceService.createResource(uploadRequest, null, studentUser.getId());
         Long resourceId = createdResource.id();
         
         // Test 1: Owner can access their pending resource
@@ -211,13 +211,13 @@ class ResourceWorkflowIntegrationTest {
         CreateResourceRequestDTO request4 = new CreateResourceRequestDTO(
             testCourse.getId(), "To Reject", ResourceType.LINK, "https://example.com/4.pdf", null, null);
         
-        resourceService.createResource(request1, studentUser.getId()); // Stays pending
-        resourceService.createResource(request2, studentUser.getId()); // Stays pending
+        resourceService.createResource(request1, null, studentUser.getId()); // Stays pending
+        resourceService.createResource(request2, null, studentUser.getId()); // Stays pending
         
-        ResourceDTO approved = resourceService.createResource(request3, studentUser.getId());
+        ResourceDTO approved = resourceService.createResource(request3, null, studentUser.getId());
         resourceService.approveResource(approved.id(), adminUser.getId());
         
-        ResourceDTO rejected = resourceService.createResource(request4, studentUser.getId());
+        ResourceDTO rejected = resourceService.createResource(request4, null, studentUser.getId());
         resourceService.rejectResource(rejected.id(), adminUser.getId(), 
             new RejectResourceRequestDTO("Invalid link"));
         

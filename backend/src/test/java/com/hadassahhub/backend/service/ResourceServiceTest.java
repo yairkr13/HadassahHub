@@ -91,7 +91,7 @@ class ResourceServiceTest {
         when(resourceRepository.save(any(Resource.class))).thenReturn(testResource);
         
         // Act
-        ResourceDTO result = resourceService.createResource(createRequest, 1L);
+        ResourceDTO result = resourceService.createResource(createRequest, null, 1L);
         
         // Assert
         assertNotNull(result);
@@ -111,7 +111,7 @@ class ResourceServiceTest {
         
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
-            () -> resourceService.createResource(createRequest, 1L));
+            () -> resourceService.createResource(createRequest, null, 1L));
         assertEquals("Course not found with id: 1", exception.getMessage());
         
         verify(resourceRepository, never()).save(any());
@@ -125,7 +125,7 @@ class ResourceServiceTest {
         
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
-            () -> resourceService.createResource(createRequest, 1L));
+            () -> resourceService.createResource(createRequest, null, 1L));
         assertEquals("User not found with id: 1", exception.getMessage());
         
         verify(resourceRepository, never()).save(any());
@@ -140,7 +140,7 @@ class ResourceServiceTest {
         
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
-            () -> resourceService.createResource(createRequest, 1L));
+            () -> resourceService.createResource(createRequest, null, 1L));
         assertEquals("You have already uploaded a resource with this title for this course", exception.getMessage());
         
         verify(resourceRepository, never()).save(any());
@@ -159,7 +159,7 @@ class ResourceServiceTest {
         
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
-            () -> resourceService.createResource(invalidExamRequest, 1L));
+            () -> resourceService.createResource(invalidExamRequest, null, 1L));
         assertEquals("Exam resources must include academic year", exception.getMessage());
         
         verify(resourceRepository, never()).save(any());

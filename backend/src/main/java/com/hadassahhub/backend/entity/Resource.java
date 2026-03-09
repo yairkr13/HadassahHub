@@ -33,8 +33,24 @@ public class Resource {
     @Column(nullable = false)
     private ResourceType type;
 
-    @Column(nullable = false)
-    private String url; // External URL for MVP, can be file path in future
+    @Column(nullable = true)
+    private String url; // External URL for URL resources, null for file uploads
+
+    // File upload fields
+    @Column(name = "is_file_upload", nullable = false)
+    private Boolean isFileUpload = false;
+
+    @Column(name = "file_name")
+    private String fileName; // Original filename for display
+
+    @Column(name = "file_path")
+    private String filePath; // Stored path (UUID-based)
+
+    @Column(name = "file_size")
+    private Long fileSize; // Size in bytes
+
+    @Column(name = "mime_type")
+    private String mimeType; // Content type
 
     @Column(name = "academic_year")
     private String academicYear; // e.g., "2024-2025"
@@ -91,6 +107,11 @@ public class Resource {
     public String getTitle() { return title; }
     public ResourceType getType() { return type; }
     public String getUrl() { return url; }
+    public Boolean getIsFileUpload() { return isFileUpload; }
+    public String getFileName() { return fileName; }
+    public String getFilePath() { return filePath; }
+    public Long getFileSize() { return fileSize; }
+    public String getMimeType() { return mimeType; }
     public String getAcademicYear() { return academicYear; }
     public String getExamTerm() { return examTerm; }
     public ResourceStatus getStatus() { return status; }
@@ -106,6 +127,11 @@ public class Resource {
     public void setTitle(String title) { this.title = title; }
     public void setType(ResourceType type) { this.type = type; }
     public void setUrl(String url) { this.url = url; }
+    public void setIsFileUpload(Boolean isFileUpload) { this.isFileUpload = isFileUpload; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+    public void setFilePath(String filePath) { this.filePath = filePath; }
+    public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+    public void setMimeType(String mimeType) { this.mimeType = mimeType; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
     public void setExamTerm(String examTerm) { this.examTerm = examTerm; }
     public void setStatus(ResourceStatus status) { this.status = status; }
@@ -126,6 +152,14 @@ public class Resource {
 
     public boolean isRejected() {
         return this.status == ResourceStatus.REJECTED;
+    }
+
+    public boolean isFileResource() {
+        return Boolean.TRUE.equals(this.isFileUpload);
+    }
+
+    public boolean isUrlResource() {
+        return !Boolean.TRUE.equals(this.isFileUpload);
     }
 
     public boolean isOwnedBy(User user) {

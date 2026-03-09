@@ -167,4 +167,62 @@ public class GlobalExceptionHandler {
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
+    
+    // File upload exception handlers
+    
+    @ExceptionHandler(InvalidFileTypeException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidFileType(InvalidFileTypeException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "Invalid file type",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+    
+    @ExceptionHandler(FileSizeLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleFileSizeLimit(FileSizeLimitExceededException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "File size limit exceeded",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+    
+    @ExceptionHandler(FileStorageException.class)
+    public ResponseEntity<ErrorResponse> handleFileStorage(FileStorageException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "File storage error",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+    
+    @ExceptionHandler(FileDownloadException.class)
+    public ResponseEntity<ErrorResponse> handleFileDownload(FileDownloadException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "File download error",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+    
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "File size limit exceeded",
+                "File size exceeds maximum limit of 10MB",
+                LocalDateTime.now()
+        );
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
 }

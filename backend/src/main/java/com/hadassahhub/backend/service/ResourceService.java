@@ -19,6 +19,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -36,13 +37,16 @@ public class ResourceService {
     private final ResourceRepository resourceRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
     
     public ResourceService(ResourceRepository resourceRepository, 
                           CourseRepository courseRepository, 
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          FileStorageService fileStorageService) {
         this.resourceRepository = resourceRepository;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
+        this.fileStorageService = fileStorageService;
     }
     
     /**
@@ -50,37 +54,56 @@ public class ResourceService {
      * Resource starts in PENDING status and requires admin approval.
      */
     @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
-    public ResourceDTO createResource(CreateResourceRequestDTO request, Long uploaderId) {
-        // Validate course exists
-        Course course = courseRepository.findById(request.courseId())
-            .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + request.courseId()));
-        
-        // Validate user exists
-        User uploader = userRepository.findById(uploaderId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + uploaderId));
-        
-        // Check for duplicate resource by same user for same course with same title
-        if (resourceRepository.existsByCourseIdAndUploadedByIdAndTitle(
-                request.courseId(), uploaderId, request.title())) {
-            throw new IllegalArgumentException("You have already uploaded a resource with this title for this course");
+        public ResourceDTO createResource(CreateResourceRequestDTO request, MultipartFile file, Long uploaderId) {
+            // Validate course exists
+            Course course = courseRepository.findById(request.courseId())
+                .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + request.courseId()));
+
+            // Validate user exists
+            User uploader = userRepository.findById(uploaderId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + uploaderId));
+
+            // Check for duplicate resource by same user for same course with same title
+            if (resourceRepository.existsByCourseIdAndUploadedByIdAndTitle(
+                    request.courseId(), uploaderId, request.title())) {
+                throw new IllegalArgumentException("You have already uploaded a resource with this title for this course");
+            }
+
+            // Validate exam resource requirements
+            if (!request.isValidExamResource()) {
+                throw new IllegalArgumentException("Exam resources must include academic year");
+            }
+
+            // Create resource entity
+            Resource resource;
+
+            // Check if this is a file upload or URL resource
+            if (file != null && !file.isEmpty()) {
+                // File upload
+                FileMetadata fileMetadata = fileStorageService.storeFile(file);
+
+                resource = new Resource(course, uploader, request.title(), request.type(), null);
+                resource.setIsFileUpload(true);
+                resource.setFileName(fileMetadata.originalFileName());
+                resource.setFilePath(fileMetadata.filePath());
+                resource.setFileSize(fileMetadata.fileSize());
+                resource.setMimeType(fileMetadata.mimeType());
+            } else {
+                // URL resource (existing behavior)
+                resource = new Resource(course, uploader, request.title(), request.type(), request.url());
+                resource.setIsFileUpload(false);
+            }
+
+            resource.setAcademicYear(request.academicYear());
+            resource.setExamTerm(request.examTerm());
+
+            // Save resource
+            Resource savedResource = resourceRepository.save(resource);
+
+            // Return DTO for owner view
+            return mapToOwnerViewDTO(savedResource);
         }
-        
-        // Validate exam resource requirements
-        if (!request.isValidExamResource()) {
-            throw new IllegalArgumentException("Exam resources must include academic year");
-        }
-        
-        // Create resource entity
-        Resource resource = new Resource(course, uploader, request.title(), request.type(), request.url());
-        resource.setAcademicYear(request.academicYear());
-        resource.setExamTerm(request.examTerm());
-        
-        // Save resource
-        Resource savedResource = resourceRepository.save(resource);
-        
-        // Return DTO for owner view
-        return mapToOwnerViewDTO(savedResource);
-    }
+
     
     /**
      * Gets approved resources for a course with optional filtering.
@@ -264,8 +287,37 @@ public class ResourceService {
             throw new IllegalArgumentException("You can only delete your own resources");
         }
         
+        // Delete physical file if this is a file resource
+        if (resource.isFileResource() && resource.getFilePath() != null) {
+            fileStorageService.deleteFile(resource.getFilePath());
+        }
+        
         resourceRepository.delete(resource);
         return true;
+    }
+    
+    /**
+     * Gets a file resource for download with access control.
+     * Verifies the resource exists, is file-based, and user has permission to access it.
+     */
+    @Transactional(readOnly = true)
+    public org.springframework.core.io.Resource getFileForDownload(Long resourceId, Long requestingUserId, boolean isAdmin) {
+        // Get resource
+        Resource resource = resourceRepository.findById(resourceId)
+            .orElseThrow(() -> new IllegalArgumentException("Resource not found with id: " + resourceId));
+        
+        // Verify it's a file resource
+        if (!resource.isFileResource()) {
+            throw new IllegalArgumentException("Cannot download URL-based resource");
+        }
+        
+        // Check access permissions
+        if (!canAccessResource(resourceId, requestingUserId, isAdmin)) {
+            throw new IllegalArgumentException("You do not have permission to access this resource");
+        }
+        
+        // Load and return file
+        return fileStorageService.loadFileAsResource(resource.getFilePath());
     }
     
     /**
@@ -468,7 +520,11 @@ public class ResourceService {
             resource.getAcademicYear(),
             resource.getExamTerm(),
             resource.getUploadedBy().getDisplayName(),
-            resource.getCreatedAt()
+            resource.getCreatedAt(),
+            resource.getIsFileUpload(),
+            resource.getFileName(),
+            resource.getFileSize(),
+            resource.getMimeType()
         );
     }
     
@@ -484,7 +540,11 @@ public class ResourceService {
             resource.getRejectionReason(),
             resource.getCourse().getName(),
             resource.getCreatedAt(),
-            resource.getUpdatedAt()
+            resource.getUpdatedAt(),
+            resource.getIsFileUpload(),
+            resource.getFileName(),
+            resource.getFileSize(),
+            resource.getMimeType()
         );
     }
     
@@ -506,7 +566,11 @@ public class ResourceService {
             resource.getApprovedBy() != null ? resource.getApprovedBy().getDisplayName() : null,
             resource.getApprovedAt(),
             resource.getCreatedAt(),
-            resource.getUpdatedAt()
+            resource.getUpdatedAt(),
+            resource.getIsFileUpload(),
+            resource.getFileName(),
+            resource.getFileSize(),
+            resource.getMimeType()
         );
     }
     

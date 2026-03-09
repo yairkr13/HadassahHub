@@ -5,14 +5,18 @@ import com.hadassahhub.backend.service.ResourceService;
 import com.hadassahhub.backend.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
@@ -35,16 +39,29 @@ public class ResourceController {
     }
     
     /**
-     * Creates a new resource (URL-based for MVP).
+     * Creates a new resource (supports both URL and file uploads).
+     * Accepts multipart/form-data for file uploads or JSON for URL resources.
      */
-    @PostMapping
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
     public ResponseEntity<ResourceDTO> createResource(
-            @Valid @RequestBody CreateResourceRequestDTO request,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart(value = "data") @Valid CreateResourceRequestDTO request,
             Authentication authentication) {
         
         Long userId = getUserIdFromAuth(authentication);
-        ResourceDTO createdResource = resourceService.createResource(request, userId);
+        
+        // Validate mutual exclusivity: exactly one of url or file must be provided
+        boolean hasFile = file != null && !file.isEmpty();
+        if (!request.hasUrlOrFile(hasFile)) {
+            if (hasFile && request.url() != null && !request.url().isEmpty()) {
+                return ResponseEntity.badRequest().build(); // Both provided
+            } else {
+                return ResponseEntity.badRequest().build(); // Neither provided
+            }
+        }
+        
+        ResourceDTO createdResource = resourceService.createResource(request, file, userId);
         
         return ResponseEntity
             .created(URI.create("/api/resources/" + createdResource.id()))
@@ -139,6 +156,46 @@ public class ResourceController {
         }
         
         return ResponseEntity.notFound().build();
+    }
+    
+    /**
+     * Downloads a file resource.
+     * Returns the file with appropriate headers for download.
+     */
+    @GetMapping("/{id}/download")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
+    public ResponseEntity<Resource> downloadFile(
+            @PathVariable Long id,
+            Authentication authentication) {
+        
+        Long userId = getUserIdFromAuth(authentication);
+        boolean isAdmin = hasAdminRole(authentication);
+        
+        try {
+            // Get resource metadata
+            Optional<ResourceDTO> resourceDTO = resourceService.getResourceById(id, userId, isAdmin);
+            if (resourceDTO.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Verify it's a file resource
+            if (!resourceDTO.get().isFileResource()) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Get file
+            Resource file = resourceService.getFileForDownload(id, userId, isAdmin);
+            
+            // Set headers
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(resourceDTO.get().mimeType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, 
+                    "attachment; filename=\"" + resourceDTO.get().fileName() + "\"")
+                .body(file);
+                
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
     }
     
     // Helper methods

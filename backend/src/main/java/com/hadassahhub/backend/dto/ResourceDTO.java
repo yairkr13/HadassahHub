@@ -26,7 +26,12 @@ public record ResourceDTO(
     String approverName,
     LocalDateTime approvedAt,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    // File upload fields
+    Boolean isFileUpload,
+    String fileName,
+    Long fileSize,
+    String mimeType
 ) {
     
     /**
@@ -41,12 +46,17 @@ public record ResourceDTO(
             String academicYear,
             String examTerm,
             String uploaderName,
-            LocalDateTime createdAt) {
+            LocalDateTime createdAt,
+            Boolean isFileUpload,
+            String fileName,
+            Long fileSize,
+            String mimeType) {
         return new ResourceDTO(
             id, title, type, url, academicYear, examTerm,
             ResourceStatus.APPROVED, null, null, null,
             null, uploaderName, null, null, null,
-            createdAt, null
+            createdAt, null,
+            isFileUpload, fileName, fileSize, mimeType
         );
     }
     
@@ -65,12 +75,17 @@ public record ResourceDTO(
             String rejectionReason,
             String courseName,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt,
+            Boolean isFileUpload,
+            String fileName,
+            Long fileSize,
+            String mimeType) {
         return new ResourceDTO(
             id, title, type, url, academicYear, examTerm,
             status, rejectionReason, null, courseName,
             null, null, null, null, null,
-            createdAt, updatedAt
+            createdAt, updatedAt,
+            isFileUpload, fileName, fileSize, mimeType
         );
     }
     
@@ -95,12 +110,17 @@ public record ResourceDTO(
             String approverName,
             LocalDateTime approvedAt,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt,
+            Boolean isFileUpload,
+            String fileName,
+            Long fileSize,
+            String mimeType) {
         return new ResourceDTO(
             id, title, type, url, academicYear, examTerm,
             status, rejectionReason, courseId, courseName,
             uploadedById, uploaderName, approvedById, approverName, approvedAt,
-            createdAt, updatedAt
+            createdAt, updatedAt,
+            isFileUpload, fileName, fileSize, mimeType
         );
     }
     
@@ -115,5 +135,9 @@ public record ResourceDTO(
     
     public boolean isRejected() {
         return status == ResourceStatus.REJECTED;
+    }
+    
+    public boolean isFileResource() {
+        return Boolean.TRUE.equals(isFileUpload);
     }
 }
