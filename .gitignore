@@ -4,6 +4,8 @@ target/
 *.jar
 *.war
 *.log
+
+# Maven wrapper
 .mvn/wrapper/maven-wrapper.jar
 
 # IntelliJ
@@ -27,10 +29,10 @@ Thumbs.db
 
 # Logs
 logs/
-*.log
 
 # Optional
 coverage/
 
+# Local dev folders
 .vscode/
 .kiro/
