@@ -1,9 +1,7 @@
 export interface ModerationStats {
-  totalPending: number;
-  totalApproved: number;
-  totalRejected: number;
-  approvedToday: number;
-  rejectedToday: number;
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
 }
 
 export interface RejectResourceRequest {

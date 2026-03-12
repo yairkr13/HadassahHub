@@ -31,7 +31,10 @@ public record ResourceDTO(
     Boolean isFileUpload,
     String fileName,
     Long fileSize,
-    String mimeType
+    String mimeType,
+    // Visibility and permission flags
+    Boolean isOwner,
+    Boolean canModerate
 ) {
     
     /**
@@ -50,13 +53,16 @@ public record ResourceDTO(
             Boolean isFileUpload,
             String fileName,
             Long fileSize,
-            String mimeType) {
+            String mimeType,
+            Boolean isOwner,
+            Boolean canModerate) {
         return new ResourceDTO(
             id, title, type, url, academicYear, examTerm,
             ResourceStatus.APPROVED, null, null, null,
             null, uploaderName, null, null, null,
             createdAt, null,
-            isFileUpload, fileName, fileSize, mimeType
+            isFileUpload, fileName, fileSize, mimeType,
+            isOwner, canModerate
         );
     }
     
@@ -79,13 +85,16 @@ public record ResourceDTO(
             Boolean isFileUpload,
             String fileName,
             Long fileSize,
-            String mimeType) {
+            String mimeType,
+            Boolean isOwner,
+            Boolean canModerate) {
         return new ResourceDTO(
             id, title, type, url, academicYear, examTerm,
             status, rejectionReason, null, courseName,
             null, null, null, null, null,
             createdAt, updatedAt,
-            isFileUpload, fileName, fileSize, mimeType
+            isFileUpload, fileName, fileSize, mimeType,
+            isOwner, canModerate
         );
     }
     
@@ -114,13 +123,16 @@ public record ResourceDTO(
             Boolean isFileUpload,
             String fileName,
             Long fileSize,
-            String mimeType) {
+            String mimeType,
+            Boolean isOwner,
+            Boolean canModerate) {
         return new ResourceDTO(
             id, title, type, url, academicYear, examTerm,
             status, rejectionReason, courseId, courseName,
             uploadedById, uploaderName, approvedById, approverName, approvedAt,
             createdAt, updatedAt,
-            isFileUpload, fileName, fileSize, mimeType
+            isFileUpload, fileName, fileSize, mimeType,
+            isOwner, canModerate
         );
     }
     

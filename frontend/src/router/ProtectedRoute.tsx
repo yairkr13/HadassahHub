@@ -56,8 +56,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
   }
 
-  if (adminOnly && user?.role !== 'ADMIN') {
-    // Show access denied message for non-admin users
+  if (adminOnly && user?.role !== 'ADMIN' && user?.role !== 'MODERATOR') {
+    // Show access denied message for non-admin/moderator users
     return (
       <div className="min-h-screen bg-background-soft flex items-center justify-center">
         <div className="text-center max-w-md">
@@ -70,7 +70,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             Access Denied
           </h2>
           <p className="text-text-secondary mb-4">
-            You don't have permission to access this page. Admin privileges are required.
+            You don't have permission to access this page. Admin or Moderator privileges are required.
           </p>
           <Navigate to={ROUTES.HOME} replace />
         </div>

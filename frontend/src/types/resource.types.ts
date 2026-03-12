@@ -1,36 +1,40 @@
 export interface Resource {
   id: number;
-  course: {
-    id: number;
-    name: string;
-  };
-  uploadedBy: {
-    id: number;
-    displayName: string;
-  };
   title: string;
   type: ResourceType;
-  url: string;
+  url: string | null;
   academicYear?: string;
   examTerm?: string;
   status: ResourceStatus;
   rejectionReason?: string;
-  approvedBy?: {
-    id: number;
-    displayName: string;
-  };
+  // Flat fields from backend
+  courseId?: number | null;
+  courseName?: string | null;
+  uploadedById?: number | null;
+  uploaderName?: string | null;
+  approvedById?: number | null;
+  approverName?: string | null;
   approvedAt?: string;
   createdAt: string;
   updatedAt?: string;
+  // File upload fields
+  isFileUpload?: boolean;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  // Visibility and permission flags
+  isOwner?: boolean;
+  canModerate?: boolean;
 }
 
 export interface CreateResourceRequest {
   courseId: number;
   title: string;
   type: ResourceType;
-  url: string;
+  url?: string; // Optional - either url or file must be provided
   academicYear?: string;
   examTerm?: string;
+  file?: File; // Optional - for file uploads
 }
 
 export interface UpdateResourceRequest {

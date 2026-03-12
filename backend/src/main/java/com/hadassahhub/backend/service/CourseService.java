@@ -51,12 +51,9 @@ public class CourseService {
      * Gets course resource statistics for enhanced course details.
      */
     public ResourceStatsDTO getCourseResourceStats(Long courseId) {
-        Optional<Course> courseOpt = courseRepository.findById(courseId);
-        if (courseOpt.isEmpty()) {
-            throw new IllegalArgumentException("Course not found with id: " + courseId);
-        }
-        
-        Course course = courseOpt.get();
+        // Validate course exists by actually fetching it (more reliable than existsById)
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + courseId));
         
         // Get approved resources for the course
         List<Resource> approvedResources = resourceRepository.findByCourseIdAndStatus(
@@ -90,12 +87,10 @@ public class CourseService {
      * Gets course with enhanced resource information.
      */
     public Optional<CourseWithResourcesDTO> getCourseWithResources(Long courseId) {
-        Optional<Course> courseOpt = courseRepository.findById(courseId);
-        if (courseOpt.isEmpty()) {
-            return Optional.empty();
-        }
+        // Validate course exists by actually fetching it
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + courseId));
         
-        Course course = courseOpt.get();
         ResourceStatsDTO resourceStats = getCourseResourceStats(courseId);
         
         // Get recent approved resources (last 5)

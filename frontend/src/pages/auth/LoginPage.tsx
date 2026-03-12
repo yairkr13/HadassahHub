@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button, Card, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,9 +10,9 @@ export const LoginPage: React.FC = () => {
     email: '',
     password: '',
   });
-  const [errors, setErrors] = useState<Partial<LoginRequest>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof LoginRequest, string>>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [touched, setTouched] = useState<Partial<LoginRequest>>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof LoginRequest, boolean>>>({});
 
   const { login, authError, clearAuthError } = useAuth();
   const navigate = useNavigate();
@@ -21,12 +21,22 @@ export const LoginPage: React.FC = () => {
   // Get the page user was trying to access before being redirected to login
   const from = location.state?.from?.pathname || ROUTES.COURSES;
 
-  // Clear auth error when component mounts or form data changes
-  useEffect(() => {
+  // Clear auth error when user starts typing (only on explicit user action)
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear auth error when user starts typing
     if (authError) {
       clearAuthError();
     }
-  }, [formData, authError, clearAuthError]);
+    
+    // Real-time validation for touched fields
+    if (touched[name as keyof LoginRequest]) {
+      const fieldError = validateField(name as keyof LoginRequest, value);
+      setErrors(prev => ({ ...prev, [name]: fieldError }));
+    }
+  };
 
   const validateField = (name: keyof LoginRequest, value: string): string | undefined => {
     switch (name) {
@@ -47,7 +57,7 @@ export const LoginPage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<LoginRequest> = {};
+    const newErrors: Partial<Record<keyof LoginRequest, string>> = {};
     
     Object.keys(formData).forEach((key) => {
       const fieldName = key as keyof LoginRequest;
@@ -79,17 +89,6 @@ export const LoginPage: React.FC = () => {
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Real-time validation for touched fields
-    if (touched[name as keyof LoginRequest]) {
-      const fieldError = validateField(name as keyof LoginRequest, value);
-      setErrors(prev => ({ ...prev, [name]: fieldError }));
     }
   };
 

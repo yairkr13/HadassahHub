@@ -13,15 +13,18 @@ export const moderationService = {
     return response.data;
   },
 
-  async approveResource(id: number): Promise<void> {
-    await apiClient.post(`/admin/resources/${id}/approve`);
+  async approveResource(id: number): Promise<Resource> {
+    const response = await apiClient.put<Resource>(`/admin/resources/${id}/approve`);
+    return response.data;
   },
 
-  async rejectResource(id: number, data: RejectResourceRequest): Promise<void> {
-    await apiClient.post(`/admin/resources/${id}/reject`, data);
+  async rejectResource(id: number, data: RejectResourceRequest): Promise<Resource> {
+    const response = await apiClient.put<Resource>(`/admin/resources/${id}/reject`, data);
+    return response.data;
   },
 
-  async resetResource(id: number): Promise<void> {
-    await apiClient.post(`/admin/resources/${id}/reset`);
+  async resetResource(id: number): Promise<Resource> {
+    const response = await apiClient.put<Resource>(`/admin/resources/${id}/reset`);
+    return response.data;
   },
 };

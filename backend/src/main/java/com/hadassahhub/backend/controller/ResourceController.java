@@ -40,32 +40,55 @@ public class ResourceController {
     
     /**
      * Creates a new resource (supports both URL and file uploads).
-     * Accepts multipart/form-data for file uploads or JSON for URL resources.
+     * Accepts multipart/form-data for file uploads.
      */
-    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    @PostMapping
     @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
-    public ResponseEntity<ResourceDTO> createResource(
-            @RequestPart(value = "file", required = false) MultipartFile file,
-            @RequestPart(value = "data") @Valid CreateResourceRequestDTO request,
+    public ResponseEntity<?> createResource(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "courseId", required = true) Long courseId,
+            @RequestParam(value = "title", required = true) String title,
+            @RequestParam(value = "type", required = true) String type,
+            @RequestParam(value = "url", required = false) String url,
+            @RequestParam(value = "academicYear", required = false) String academicYear,
+            @RequestParam(value = "examTerm", required = false) String examTerm,
             Authentication authentication) {
         
-        Long userId = getUserIdFromAuth(authentication);
-        
-        // Validate mutual exclusivity: exactly one of url or file must be provided
-        boolean hasFile = file != null && !file.isEmpty();
-        if (!request.hasUrlOrFile(hasFile)) {
-            if (hasFile && request.url() != null && !request.url().isEmpty()) {
-                return ResponseEntity.badRequest().build(); // Both provided
-            } else {
-                return ResponseEntity.badRequest().build(); // Neither provided
+        try {
+            Long userId = getUserIdFromAuth(authentication);
+            
+            // Parse resource type
+            com.hadassahhub.backend.enums.ResourceType resourceType;
+            try {
+                resourceType = com.hadassahhub.backend.enums.ResourceType.valueOf(type.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body("Invalid resource type: " + type);
             }
+            
+            // Create DTO
+            CreateResourceRequestDTO request = new CreateResourceRequestDTO(
+                courseId, title, resourceType, url, academicYear, examTerm
+            );
+            
+            // Validate mutual exclusivity: exactly one of url or file must be provided
+            boolean hasFile = file != null && !file.isEmpty();
+            if (!request.hasUrlOrFile(hasFile)) {
+                if (hasFile && request.url() != null && !request.url().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Cannot provide both file and URL");
+                } else {
+                    return ResponseEntity.badRequest().body("Must provide either file or URL");
+                }
+            }
+            
+            ResourceDTO createdResource = resourceService.createResource(request, file, userId);
+            
+            return ResponseEntity
+                .created(URI.create("/api/resources/" + createdResource.id()))
+                .body(createdResource);
+                
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error creating resource: " + e.getMessage());
         }
-        
-        ResourceDTO createdResource = resourceService.createResource(request, file, userId);
-        
-        return ResponseEntity
-            .created(URI.create("/api/resources/" + createdResource.id()))
-            .body(createdResource);
     }
     
     /**

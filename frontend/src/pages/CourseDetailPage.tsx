@@ -4,9 +4,10 @@ import { useCourse } from '@/hooks/useCourses';
 import { useCourseResources, useCourseResourceStats } from '@/hooks/useResources';
 import { Card, Button } from '@/components/ui';
 import { ResourceList } from '@/components/resources';
-import { ErrorBoundary, SkeletonLoader, EmptyState, ErrorState } from '@/components/common';
+import { ErrorBoundary, SkeletonLoader, ErrorState } from '@/components/common';
 import { mapBackendCategoryToDisplay, CourseCategoryDisplay } from '@/types/course.types';
 import { ResourceFilters } from '@/types/resource.types';
+import { useAuth } from '@/hooks/useAuth';
 
 const getCategoryDisplayName = (category: CourseCategoryDisplay): string => {
   switch (category) {
@@ -24,7 +25,28 @@ const getCategoryDisplayName = (category: CourseCategoryDisplay): string => {
 export const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const courseId = id ? parseInt(id, 10) : 0;
+  
+  // Early return if invalid courseId
+  if (!id || courseId <= 0 || isNaN(courseId)) {
+    return (
+      <div className="min-h-screen bg-background-soft">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <ErrorState
+            title="Invalid Course"
+            description="The course ID in the URL is invalid."
+          />
+          <div className="text-center mt-6">
+            <Link to="/courses">
+              <Button variant="secondary">Back to Courses</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   const [resourceFilters, setResourceFilters] = useState<ResourceFilters>({});
+  const { user } = useAuth();
   
   const { data: course, isLoading: courseLoading, error: courseError, refetch: refetchCourse } = useCourse(courseId);
   const { 
@@ -34,6 +56,8 @@ export const CourseDetailPage: React.FC = () => {
     refetch: refetchResources
   } = useCourseResources(courseId, resourceFilters);
   const { data: resourceStats } = useCourseResourceStats(courseId);
+
+  const canModerate = user?.role === 'ADMIN' || user?.role === 'MODERATOR';
 
   if (courseLoading) {
     return (
@@ -292,6 +316,8 @@ export const CourseDetailPage: React.FC = () => {
                 filters={resourceFilters}
                 onFiltersChange={setResourceFilters}
                 emptyMessage="No resources available for this course yet"
+                showModerationActions={canModerate}
+                onModerationSuccess={refetchResources}
               />
             )}
           </ErrorBoundary>

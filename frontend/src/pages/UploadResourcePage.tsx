@@ -5,7 +5,6 @@ import { Card, Button, Input } from '@/components/ui';
 import { useCourse } from '@/hooks/useCourses';
 import { resourceService } from '@/services/api/resource.service';
 import { CreateResourceRequest, ResourceType, getResourceTypeDisplayName } from '@/types/resource.types';
-import { ROUTES } from '@/router/routes';
 
 export const UploadResourcePage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +15,9 @@ export const UploadResourcePage: React.FC = () => {
   // Fetch course details to show course name
   const { data: course, isLoading: courseLoading } = useCourse(courseId);
 
+  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [formData, setFormData] = useState<CreateResourceRequest>({
     courseId: courseId,
     title: '',
@@ -25,7 +27,7 @@ export const UploadResourcePage: React.FC = () => {
     examTerm: '',
   });
 
-  const [errors, setErrors] = useState<Partial<CreateResourceRequest>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof CreateResourceRequest | 'file', string>>>({});
 
   // Update courseId when params change
   useEffect(() => {
@@ -52,24 +54,50 @@ export const UploadResourcePage: React.FC = () => {
   });
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<CreateResourceRequest> = {};
+    const newErrors: Partial<Record<keyof CreateResourceRequest | 'file', string>> = {};
 
     if (!formData.courseId || formData.courseId === 0) {
-      newErrors.courseId = 1; // Just to indicate error
+      newErrors.courseId = 'Course is required';
     }
 
     if (!formData.title.trim()) {
       newErrors.title = 'Resource title is required';
     }
 
-    if (!formData.url.trim()) {
-      newErrors.url = 'Resource URL is required';
+    // Validate based on upload mode
+    if (uploadMode === 'url') {
+      if (!formData.url?.trim()) {
+        newErrors.url = 'Resource URL is required';
+      } else {
+        // Basic URL validation
+        try {
+          new URL(formData.url);
+        } catch {
+          newErrors.url = 'Please enter a valid URL';
+        }
+      }
     } else {
-      // Basic URL validation
-      try {
-        new URL(formData.url);
-      } catch {
-        newErrors.url = 'Please enter a valid URL';
+      // File mode
+      if (!selectedFile) {
+        newErrors.file = 'Please select a file to upload';
+      } else {
+        // Validate file size (10MB max)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (selectedFile.size > maxSize) {
+          newErrors.file = 'File size must be less than 10MB';
+        }
+        
+        // Validate file type
+        const allowedTypes = [
+          'application/pdf',
+          'image/png',
+          'image/jpeg',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'text/plain'
+        ];
+        if (!allowedTypes.includes(selectedFile.type)) {
+          newErrors.file = 'File type not allowed. Please upload PDF, PNG, JPEG, DOCX, or TXT files';
+        }
       }
     }
 
@@ -87,10 +115,16 @@ export const UploadResourcePage: React.FC = () => {
       courseId: formData.courseId,
       title: formData.title.trim(),
       type: formData.type,
-      url: formData.url.trim(),
-      academicYear: formData.academicYear.trim() || undefined,
-      examTerm: formData.examTerm.trim() || undefined,
+      academicYear: formData.academicYear?.trim() || undefined,
+      examTerm: formData.examTerm?.trim() || undefined,
     };
+
+    // Add url or file based on mode
+    if (uploadMode === 'url') {
+      submitData.url = formData.url?.trim();
+    } else {
+      submitData.file = selectedFile || undefined;
+    }
 
     uploadMutation.mutate(submitData);
   };
@@ -102,6 +136,24 @@ export const UploadResourcePage: React.FC = () => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    
+    // Clear file error when user selects a file
+    if (file && errors.file) {
+      setErrors(prev => ({ ...prev, file: undefined }));
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   const academicYears = [
@@ -215,22 +267,137 @@ export const UploadResourcePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Resource URL */}
+            {/* Upload Mode Selection */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Resource URL *
+              <label className="block text-sm font-medium text-text-primary mb-3">
+                Upload Method *
               </label>
-              <Input
-                type="url"
-                value={formData.url}
-                onChange={(e) => handleChange('url', e.target.value)}
-                placeholder="https://example.com/resource.pdf"
-                error={errors.url}
-              />
-              <p className="mt-1 text-sm text-text-secondary">
-                Link to your resource (Google Drive, Dropbox, etc.)
-              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadMode('url');
+                    setSelectedFile(null);
+                    setErrors(prev => ({ ...prev, file: undefined }));
+                  }}
+                  className={`p-4 border rounded-lg text-sm font-medium transition-colors ${uploadMode === 'url'
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-gray-300 bg-white text-text-secondary hover:border-primary'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <span>Link URL</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadMode('file');
+                    setFormData(prev => ({ ...prev, url: '' }));
+                    setErrors(prev => ({ ...prev, url: undefined }));
+                  }}
+                  className={`p-4 border rounded-lg text-sm font-medium transition-colors ${uploadMode === 'file'
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-gray-300 bg-white text-text-secondary hover:border-primary'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span>Upload File</span>
+                  </div>
+                </button>
+              </div>
             </div>
+
+            {/* Resource URL (only if URL mode) */}
+            {uploadMode === 'url' && (
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Resource URL *
+                </label>
+                <Input
+                  type="url"
+                  value={formData.url || ''}
+                  onChange={(e) => handleChange('url', e.target.value)}
+                  placeholder="https://example.com/resource.pdf"
+                  error={errors.url}
+                />
+                <p className="mt-1 text-sm text-text-secondary">
+                  Link to your resource (Google Drive, Dropbox, etc.)
+                </p>
+              </div>
+            )}
+
+            {/* File Upload (only if file mode) */}
+            {uploadMode === 'file' && (
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Upload File *
+                </label>
+                <div className="space-y-3">
+                  <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${errors.file ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-primary'
+                    }`}>
+                    <input
+                      type="file"
+                      id="file-upload"
+                      onChange={handleFileChange}
+                      accept=".pdf,.png,.jpg,.jpeg,.docx,.txt"
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="cursor-pointer flex flex-col items-center"
+                    >
+                      <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-sm font-medium text-primary hover:text-primary-dark">
+                        Click to upload
+                      </span>
+                      <span className="text-xs text-text-secondary mt-1">
+                        PDF, PNG, JPEG, DOCX, or TXT (max 10MB)
+                      </span>
+                    </label>
+                  </div>
+                  
+                  {selectedFile && (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-text-primary">{selectedFile.name}</p>
+                          <p className="text-xs text-text-secondary">{formatFileSize(selectedFile.size)}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+                          if (fileInput) fileInput.value = '';
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {errors.file && (
+                    <p className="text-sm text-red-600">{errors.file}</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Academic Year */}
             <div>

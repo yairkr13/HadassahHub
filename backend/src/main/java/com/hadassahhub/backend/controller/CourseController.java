@@ -45,7 +45,10 @@ public class CourseController {
     }
     
     /**
-     * Gets approved resources for a course with filtering.
+     * Gets resources for a course with filtering and proper visibility rules.
+     * Implements visibility logic:
+     * - APPROVED resources: visible to everyone
+     * - PENDING/REJECTED resources: visible only to uploader and admins/moderators
      */
     @GetMapping("/{id}/resources")
     public ResponseEntity<List<ResourceDTO>> getCourseResources(
@@ -54,7 +57,8 @@ public class CourseController {
             @RequestParam(required = false) String academicYear,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDirection) {
+            @RequestParam(defaultValue = "desc") String sortDirection,
+            Authentication authentication) {
         
         ResourceFilterDTO filter = new ResourceFilterDTO(
             id, parseResourceType(type), null, academicYear, null, search, null,
@@ -62,15 +66,32 @@ public class CourseController {
         );
         
         try {
-            List<ResourceDTO> resources = resourceService.getCourseResources(id, filter);
+            // Extract user context - handle authentication safely
+            Long currentUserId = null;
+            boolean isAdminOrModerator = false;
+            
+            if (authentication != null) {
+                try {
+                    currentUserId = getUserIdFromAuth(authentication);
+                    isAdminOrModerator = hasAdminRole(authentication);
+                } catch (NumberFormatException e) {
+                    // Invalid user ID in token - treat as anonymous user
+                    currentUserId = null;
+                    isAdminOrModerator = false;
+                }
+            }
+            
+            List<ResourceDTO> resources = resourceService.getCourseResources(id, filter, currentUserId, isAdminOrModerator);
             return ResponseEntity.ok(resources);
         } catch (IllegalArgumentException e) {
+            // Only return 404 if course doesn't exist
+            // Empty results should return 200 with empty array
             return ResponseEntity.notFound().build();
         }
     }
     
     /**
-     * Gets course resources with pagination.
+     * Gets course resources with pagination and proper visibility rules.
      */
     @GetMapping("/{id}/resources/paginated")
     public ResponseEntity<Page<ResourceDTO>> getCourseResourcesPaginated(
@@ -81,7 +102,8 @@ public class CourseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDirection) {
+            @RequestParam(defaultValue = "desc") String sortDirection,
+            Authentication authentication) {
         
         ResourceFilterDTO filter = new ResourceFilterDTO(
             id, parseResourceType(type), null, academicYear, null, search, null,
@@ -89,9 +111,25 @@ public class CourseController {
         );
         
         try {
-            Page<ResourceDTO> resources = resourceService.getCourseResourcesPaginated(id, filter);
+            // Extract user context - handle authentication safely
+            Long currentUserId = null;
+            boolean isAdminOrModerator = false;
+            
+            if (authentication != null) {
+                try {
+                    currentUserId = getUserIdFromAuth(authentication);
+                    isAdminOrModerator = hasAdminRole(authentication);
+                } catch (NumberFormatException e) {
+                    // Invalid user ID in token - treat as anonymous user
+                    currentUserId = null;
+                    isAdminOrModerator = false;
+                }
+            }
+            
+            Page<ResourceDTO> resources = resourceService.getCourseResourcesPaginated(id, filter, currentUserId, isAdminOrModerator);
             return ResponseEntity.ok(resources);
         } catch (IllegalArgumentException e) {
+            // Only return 404 if course doesn't exist
             return ResponseEntity.notFound().build();
         }
     }
@@ -141,6 +179,12 @@ public class CourseController {
     
     private Long getUserIdFromAuth(Authentication authentication) {
         return Long.parseLong(authentication.getName());
+    }
+    
+    private boolean hasAdminRole(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN") || 
+                             auth.getAuthority().equals("ROLE_MODERATOR"));
     }
     
     private com.hadassahhub.backend.enums.ResourceType parseResourceType(String type) {

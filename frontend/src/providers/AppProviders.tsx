@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
       refetchOnMount: 'always', // Always refetch on mount for fresh data
       refetchOnReconnect: 'always', // Refetch when reconnecting
     },

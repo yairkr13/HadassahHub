@@ -1,23 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { moderationService } from '@/services/api/moderation.service';
-import { RejectResourceRequest } from '@/types/moderation.types';
+import { RejectResourceRequest, ModerationStats } from '@/types/moderation.types';
+import { Resource } from '@/types/resource.types';
 
 export const usePendingResources = () => {
-  return useQuery({
+  return useQuery<Resource[]>({
     queryKey: ['pending-resources'],
     queryFn: moderationService.getPendingResources,
     staleTime: 30 * 1000, // 30 seconds - pending resources change frequently
-    cacheTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 2 * 60 * 1000, // 2 minutes
     refetchInterval: 60 * 1000, // Refetch every minute for admins
   });
 };
 
 export const useModerationStats = () => {
-  return useQuery({
+  return useQuery<ModerationStats>({
     queryKey: ['moderation-stats'],
     queryFn: moderationService.getModerationStats,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 

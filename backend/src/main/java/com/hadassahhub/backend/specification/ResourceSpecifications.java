@@ -126,7 +126,10 @@ public class ResourceSpecifications {
     /**
      * Complex specification builder for course page filtering.
      * Combines course ID, status, and optional type/year filters.
+     * 
+     * DEPRECATED: Use forCoursePageWithVisibility instead for proper visibility control.
      */
+    @Deprecated
     public static Specification<Resource> forCoursePageFiltering(
             Long courseId, 
             ResourceType type, 
@@ -138,6 +141,72 @@ public class ResourceSpecifications {
                 .and(hasType(type))
                 .and(hasAcademicYear(academicYear))
                 .and(titleContains(searchTitle));
+    }
+    
+    /**
+     * Specification for course page filtering with visibility rules.
+     * Implements the following visibility logic:
+     * - APPROVED resources: visible to everyone
+     * - PENDING resources: visible to uploader + admins/moderators
+     * - REJECTED resources: visible to uploader + admins/moderators
+     * 
+     * @param courseId The course ID to filter by
+     * @param type Optional resource type filter
+     * @param academicYear Optional academic year filter
+     * @param searchTitle Optional title search
+     * @param currentUserId The ID of the user making the request (null for anonymous)
+     * @param isAdminOrModerator Whether the user has admin/moderator privileges
+     */
+    public static Specification<Resource> forCoursePageWithVisibility(
+            Long courseId,
+            ResourceType type,
+            String academicYear,
+            String searchTitle,
+            Long currentUserId,
+            boolean isAdminOrModerator) {
+        
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // Must be for the specified course
+            if (courseId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("course").get("id"), courseId));
+            }
+            
+            // Visibility logic
+            if (isAdminOrModerator) {
+                // Admins/moderators see all resources
+                // No additional status filter needed
+            } else if (currentUserId != null) {
+                // Regular users see:
+                // 1. All approved resources
+                // 2. Their own pending/rejected resources
+                Predicate isApproved = criteriaBuilder.equal(root.get("status"), ResourceStatus.APPROVED);
+                Predicate isOwner = criteriaBuilder.equal(root.get("uploadedBy").get("id"), currentUserId);
+                predicates.add(criteriaBuilder.or(isApproved, isOwner));
+            } else {
+                // Anonymous users see only approved resources
+                predicates.add(criteriaBuilder.equal(root.get("status"), ResourceStatus.APPROVED));
+            }
+            
+            // Optional filters
+            if (type != null) {
+                predicates.add(criteriaBuilder.equal(root.get("type"), type));
+            }
+            
+            if (academicYear != null && !academicYear.trim().isEmpty()) {
+                predicates.add(criteriaBuilder.equal(root.get("academicYear"), academicYear));
+            }
+            
+            if (searchTitle != null && !searchTitle.trim().isEmpty()) {
+                predicates.add(criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("title")),
+                    "%" + searchTitle.toLowerCase() + "%"
+                ));
+            }
+            
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
     }
     
     /**

@@ -7,6 +7,8 @@ export const ROUTES = {
   COURSE_UPLOAD: '/courses/:id/upload',
   MY_RESOURCES: '/my-resources',
   ADMIN_MODERATION: '/admin/moderation',
+  ADMIN_PENDING_RESOURCES: '/admin/resources/pending',
+  ADMIN_USER_MANAGEMENT: '/admin/users',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

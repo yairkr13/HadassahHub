@@ -15,6 +15,8 @@ interface ResourceListProps {
   onDelete?: (id: number) => void;
   onEdit?: (resource: Resource) => void;
   emptyMessage?: string;
+  showModerationActions?: boolean;
+  onModerationSuccess?: () => void;
 }
 
 export const ResourceList: React.FC<ResourceListProps> = ({
@@ -28,6 +30,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   onDelete,
   onEdit,
   emptyMessage = 'No resources found',
+  showModerationActions = false,
+  onModerationSuccess,
 }) => {
   const [localFilters, setLocalFilters] = useState<ResourceFilters>(filters);
 
@@ -97,8 +101,10 @@ export const ResourceList: React.FC<ResourceListProps> = ({
               resource={resource}
               showCourse={showCourse}
               showActions={showActions}
+              showModerationActions={showModerationActions}
               onDelete={onDelete}
               onEdit={onEdit}
+              onModerationSuccess={onModerationSuccess}
             />
           ))}
         </div>

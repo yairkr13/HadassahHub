@@ -1,3 +1,5 @@
+import { Resource, ResourceStats } from './resource.types';
+
 export interface Course {
   id: number;
   name: string;
@@ -17,30 +19,6 @@ export interface CourseDetail extends Course {
   resourceStats: ResourceStats;
 }
 
-export interface Resource {
-  id: number;
-  title: string;
-  type: ResourceType;
-  url: string;
-  academicYear?: string;
-  examTerm?: string;
-  status: ResourceStatus;
-  uploadedBy: {
-    id: number;
-    displayName: string;
-  };
-  createdAt: string;
-}
-
-export interface ResourceStats {
-  totalResources: number;
-  approvedResources: number;
-  pendingResources: number;
-  resourcesByType: {
-    [key in ResourceType]: number;
-  };
-}
-
 // Backend enum mapping
 export enum CourseCategory {
   CS_CORE = 'CS_CORE',
@@ -53,19 +31,6 @@ export enum CourseCategoryDisplay {
   CS_MANDATORY = 'CS_MANDATORY',
   CS_ELECTIVE = 'CS_ELECTIVE',
   COLLEGE_GENERAL = 'COLLEGE_GENERAL'
-}
-
-export enum ResourceType {
-  EXAM = 'EXAM',
-  HOMEWORK = 'HOMEWORK',
-  SUMMARY = 'SUMMARY',
-  LINK = 'LINK'
-}
-
-export enum ResourceStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED'
 }
 
 export interface CourseFilters {

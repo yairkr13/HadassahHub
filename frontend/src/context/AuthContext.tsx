@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useEffect, useState, ReactNode } from 'react';
 import { User, AuthContextType, LoginRequest, RegisterRequest } from '@/types/auth.types';
 import { authService } from '@/services/api/auth.service';
 import { storage } from '@/utils/storage';
@@ -37,7 +37,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           } catch (error) {
             // Token is invalid or expired, clear auth state
-            console.log('Token verification failed, clearing auth state');
             setAuthError('Your session has expired. Please sign in again.');
             storage.clearAll();
             setToken(null);
@@ -68,8 +67,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       storage.setToken(response.token);
       storage.setUserData(response.user);
-    } catch (error) {
-      setAuthError('Login failed. Please check your credentials.');
+    } catch (error: any) {
+      // Extract error message from backend response
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.error ||
+                          error?.message || 
+                          'Login failed. Please check your credentials.';
+      
+      setAuthError(errorMessage);
       throw error;
     }
   };
@@ -84,8 +89,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       storage.setToken(response.token);
       storage.setUserData(response.user);
-    } catch (error) {
-      setAuthError('Registration failed. Please try again.');
+    } catch (error: any) {
+      // Extract error message from backend response
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          'Registration failed. Please try again.';
+      setAuthError(errorMessage);
       throw error;
     }
   };

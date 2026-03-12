@@ -92,15 +92,37 @@ export const Navbar: React.FC = () => {
                 >
                   My Resources
                 </Link>
+                {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') && (
+                  <>
+                    <Link
+                      to={ROUTES.ADMIN_PENDING_RESOURCES}
+                      className={`transition-colors ${isActivePath(ROUTES.ADMIN_PENDING_RESOURCES)
+                          ? 'text-primary font-medium'
+                          : 'text-text-secondary hover:text-text-primary'
+                        }`}
+                    >
+                      Pending Resources
+                    </Link>
+                    <Link
+                      to={ROUTES.ADMIN_MODERATION}
+                      className={`transition-colors ${isActivePath(ROUTES.ADMIN_MODERATION)
+                          ? 'text-primary font-medium'
+                          : 'text-text-secondary hover:text-text-primary'
+                        }`}
+                    >
+                      Moderation
+                    </Link>
+                  </>
+                )}
                 {user?.role === 'ADMIN' && (
                   <Link
-                    to={ROUTES.ADMIN_MODERATION}
-                    className={`transition-colors ${isActivePath(ROUTES.ADMIN_MODERATION)
+                    to={ROUTES.ADMIN_USER_MANAGEMENT}
+                    className={`transition-colors ${isActivePath(ROUTES.ADMIN_USER_MANAGEMENT)
                         ? 'text-primary font-medium'
                         : 'text-text-secondary hover:text-text-primary'
                       }`}
                   >
-                    Moderation
+                    User Management
                   </Link>
                 )}
                 <div className="flex items-center space-x-2">
@@ -188,16 +210,41 @@ export const Navbar: React.FC = () => {
                     My Resources
                   </Link>
 
+                  {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') && (
+                    <>
+                      <Link
+                        to={ROUTES.ADMIN_PENDING_RESOURCES}
+                        onClick={closeMobileMenu}
+                        className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActivePath(ROUTES.ADMIN_PENDING_RESOURCES)
+                            ? 'text-primary bg-primary/5'
+                            : 'text-text-secondary hover:text-text-primary hover:bg-gray-50'
+                          }`}
+                      >
+                        Pending Resources
+                      </Link>
+                      <Link
+                        to={ROUTES.ADMIN_MODERATION}
+                        onClick={closeMobileMenu}
+                        className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActivePath(ROUTES.ADMIN_MODERATION)
+                            ? 'text-primary bg-primary/5'
+                            : 'text-text-secondary hover:text-text-primary hover:bg-gray-50'
+                          }`}
+                      >
+                        Moderation
+                      </Link>
+                    </>
+                  )}
+
                   {user?.role === 'ADMIN' && (
                     <Link
-                      to={ROUTES.ADMIN_MODERATION}
+                      to={ROUTES.ADMIN_USER_MANAGEMENT}
                       onClick={closeMobileMenu}
-                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActivePath(ROUTES.ADMIN_MODERATION)
+                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActivePath(ROUTES.ADMIN_USER_MANAGEMENT)
                           ? 'text-primary bg-primary/5'
                           : 'text-text-secondary hover:text-text-primary hover:bg-gray-50'
                         }`}
                     >
-                      Moderation
+                      User Management
                     </Link>
                   )}
 

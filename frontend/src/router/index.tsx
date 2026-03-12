@@ -21,6 +21,18 @@ const ModerationPage = React.lazy(() =>
   }))
 );
 
+const PendingResourcesPage = React.lazy(() =>
+  import('@/pages/admin/PendingResourcesPage').then(module => ({
+    default: module.PendingResourcesPage
+  }))
+);
+
+const UserManagementPage = React.lazy(() =>
+  import('@/pages/admin/UserManagementPage').then(module => ({
+    default: module.UserManagementPage
+  }))
+);
+
 // Loading component for lazy-loaded routes
 const LazyLoadingFallback = () => (
   <div className="min-h-screen bg-background-soft flex items-center justify-center">
@@ -94,6 +106,26 @@ export const router = createBrowserRouter([
           <ProtectedRoute adminOnly={true}>
             <Suspense fallback={<LazyLoadingFallback />}>
               <ModerationPage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: ROUTES.ADMIN_PENDING_RESOURCES,
+        element: (
+          <ProtectedRoute adminOnly={true}>
+            <Suspense fallback={<LazyLoadingFallback />}>
+              <PendingResourcesPage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: ROUTES.ADMIN_USER_MANAGEMENT,
+        element: (
+          <ProtectedRoute adminOnly={true}>
+            <Suspense fallback={<LazyLoadingFallback />}>
+              <UserManagementPage />
             </Suspense>
           </ProtectedRoute>
         ),

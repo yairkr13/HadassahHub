@@ -1,43 +1,43 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { resourceService } from '@/services/api/resource.service';
-import { ResourceFilters, CreateResourceRequest, UpdateResourceRequest } from '@/types/resource.types';
+import { Resource, ResourceFilters, CreateResourceRequest, UpdateResourceRequest, ResourceStats } from '@/types/resource.types';
 
 export const useMyResources = (filters?: ResourceFilters) => {
-  return useQuery({
+  return useQuery<Resource[]>({
     queryKey: ['my-resources', filters],
     queryFn: () => resourceService.getMyResources(filters),
     staleTime: 1 * 60 * 1000, // 1 minute - user's own resources change frequently
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
 export const useCourseResources = (courseId: number, filters?: ResourceFilters) => {
-  return useQuery({
+  return useQuery<Resource[]>({
     queryKey: ['course-resources', courseId, filters],
     queryFn: () => resourceService.getCourseResources(courseId, filters),
-    enabled: !!courseId,
+    enabled: !!courseId && courseId > 0,
     staleTime: 2 * 60 * 1000, // 2 minutes - resources change frequently
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 
 export const useCourseResourceStats = (courseId: number) => {
-  return useQuery({
+  return useQuery<ResourceStats>({
     queryKey: ['course-resource-stats', courseId],
     queryFn: () => resourceService.getCourseResourceStats(courseId),
-    enabled: !!courseId,
+    enabled: !!courseId && courseId > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes - stats update with new resources
-    cacheTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 };
 
 export const useResource = (id: number) => {
-  return useQuery({
+  return useQuery<Resource>({
     queryKey: ['resource', id],
     queryFn: () => resourceService.getResourceById(id),
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 

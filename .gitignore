@@ -34,5 +34,5 @@ logs/
 coverage/
 
 # Local dev folders
-.vscode/
-.kiro/
+# .vscode/
+# .kiro/

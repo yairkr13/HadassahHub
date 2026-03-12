@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Card } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { ResourceList } from '@/components/resources';
 import { EmptyState, ErrorState } from '@/components/common';
 import { resourceService } from '@/services/api/resource.service';

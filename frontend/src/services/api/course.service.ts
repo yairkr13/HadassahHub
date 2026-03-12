@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Course, CourseDetail, CourseFilters, mapDisplayCategoryToBackend } from '@/types/course.types';
+import { Course, CourseFilters, mapDisplayCategoryToBackend } from '@/types/course.types';
 
 export const courseService = {
   async getCourses(filters?: CourseFilters): Promise<Course[]> {
@@ -26,8 +26,8 @@ export const courseService = {
     return response.data;
   },
 
-  async getCourseById(id: number): Promise<CourseDetail> {
-    const response = await apiClient.get<CourseDetail>(`/courses/${id}`);
+  async getCourseById(id: number): Promise<Course> {
+    const response = await apiClient.get<Course>(`/courses/${id}`);
     return response.data;
   },
 

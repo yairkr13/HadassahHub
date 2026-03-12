@@ -12,10 +12,10 @@ export const RegisterPage: React.FC = () => {
     email: '',
     password: '',
   });
-  const [errors, setErrors] = useState<Partial<RegisterRequest & { confirmPassword: string }>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof (RegisterRequest & { confirmPassword: string }), string>>>({});
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [touched, setTouched] = useState<Partial<RegisterRequest & { confirmPassword: string }>>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof (RegisterRequest & { confirmPassword: string }), boolean>>>({});
 
   const { register, authError, clearAuthError } = useAuth();
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ export const RegisterPage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<RegisterRequest & { confirmPassword: string }> = {};
+    const newErrors: Partial<Record<keyof (RegisterRequest & { confirmPassword: string }), string>> = {};
     
     // Validate all form fields
     Object.keys(formData).forEach((key) => {

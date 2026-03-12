@@ -45,6 +45,11 @@ public interface ResourceRepository extends JpaRepository<Resource, Long>, JpaSp
     List<Resource> findByUploadedByIdOrderByCreatedAtDesc(Long userId);
     
     /**
+     * Count resources uploaded by a specific user.
+     */
+    long countByUploadedById(Long userId);
+    
+    /**
      * Find resources by uploader and status.
      */
     List<Resource> findByUploadedByIdAndStatusOrderByCreatedAtDesc(Long userId, ResourceStatus status);

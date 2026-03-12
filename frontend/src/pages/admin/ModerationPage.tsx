@@ -26,8 +26,7 @@ export const ModerationPage: React.FC = () => {
   
   const { 
     data: stats, 
-    isLoading: statsLoading,
-    refetch: refetchStats
+    isLoading: statsLoading
   } = useModerationStats();
 
   // Mutations

@@ -106,19 +106,26 @@ public class ResourceService {
 
     
     /**
-     * Gets approved resources for a course with optional filtering.
-     * Used for course details pages.
+     * Gets resources for a course with visibility rules applied.
+     * Implements proper visibility:
+     * - APPROVED: visible to everyone
+     * - PENDING/REJECTED: visible only to uploader and admins/moderators
+     * 
+     * @param courseId The course ID
+     * @param filter Filter criteria
+     * @param currentUserId The requesting user's ID (null for anonymous)
+     * @param isAdminOrModerator Whether the user has admin/moderator privileges
      */
     @Transactional(readOnly = true)
-    public List<ResourceDTO> getCourseResources(Long courseId, ResourceFilterDTO filter) {
-        // Validate course exists
-        if (!courseRepository.existsById(courseId)) {
-            throw new IllegalArgumentException("Course not found with id: " + courseId);
-        }
+    public List<ResourceDTO> getCourseResources(Long courseId, ResourceFilterDTO filter, Long currentUserId, boolean isAdminOrModerator) {
+        // Validate course exists by actually fetching it (more reliable than existsById)
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + courseId));
         
-        // Build specification for approved resources
-        Specification<Resource> spec = ResourceSpecifications.forCoursePageFiltering(
-            courseId, filter.type(), filter.academicYear(), filter.titleSearch()
+        // Build specification with visibility rules
+        Specification<Resource> spec = ResourceSpecifications.forCoursePageWithVisibility(
+            courseId, filter.type(), filter.academicYear(), filter.titleSearch(),
+            currentUserId, isAdminOrModerator
         );
         
         // Create sort order
@@ -127,25 +134,36 @@ public class ResourceService {
         // Get resources
         List<Resource> resources = resourceRepository.findAll(spec, sort);
         
-        // Map to public view DTOs
+        // Map to DTOs with proper view based on user context
         return resources.stream()
-            .map(this::mapToPublicViewDTO)
+            .map(resource -> mapToContextualDTO(resource, currentUserId, isAdminOrModerator))
             .collect(Collectors.toList());
     }
     
     /**
-     * Gets approved resources for a course with pagination.
+     * DEPRECATED: Use getCourseResources with user context instead.
+     * This method is kept for backward compatibility but should not be used.
+     */
+    @Deprecated
+    @Transactional(readOnly = true)
+    public List<ResourceDTO> getCourseResources(Long courseId, ResourceFilterDTO filter) {
+        // Default to anonymous user view (only approved resources)
+        return getCourseResources(courseId, filter, null, false);
+    }
+    
+    /**
+     * Gets resources for a course with pagination and visibility rules.
      */
     @Transactional(readOnly = true)
-    public Page<ResourceDTO> getCourseResourcesPaginated(Long courseId, ResourceFilterDTO filter) {
-        // Validate course exists
-        if (!courseRepository.existsById(courseId)) {
-            throw new IllegalArgumentException("Course not found with id: " + courseId);
-        }
+    public Page<ResourceDTO> getCourseResourcesPaginated(Long courseId, ResourceFilterDTO filter, Long currentUserId, boolean isAdminOrModerator) {
+        // Validate course exists by actually fetching it (more reliable than existsById)
+        Course course = courseRepository.findById(courseId)
+            .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + courseId));
         
-        // Build specification for approved resources
-        Specification<Resource> spec = ResourceSpecifications.forCoursePageFiltering(
-            courseId, filter.type(), filter.academicYear(), filter.titleSearch()
+        // Build specification with visibility rules
+        Specification<Resource> spec = ResourceSpecifications.forCoursePageWithVisibility(
+            courseId, filter.type(), filter.academicYear(), filter.titleSearch(),
+            currentUserId, isAdminOrModerator
         );
         
         // Create pageable
@@ -158,8 +176,17 @@ public class ResourceService {
         // Get resources page
         Page<Resource> resourcePage = resourceRepository.findAll(spec, pageable);
         
-        // Map to public view DTOs
-        return resourcePage.map(this::mapToPublicViewDTO);
+        // Map to DTOs with proper view based on user context
+        return resourcePage.map(resource -> mapToContextualDTO(resource, currentUserId, isAdminOrModerator));
+    }
+    
+    /**
+     * DEPRECATED: Use getCourseResourcesPaginated with user context instead.
+     */
+    @Deprecated
+    @Transactional(readOnly = true)
+    public Page<ResourceDTO> getCourseResourcesPaginated(Long courseId, ResourceFilterDTO filter) {
+        return getCourseResourcesPaginated(courseId, filter, null, false);
     }
     
     /**
@@ -351,17 +378,17 @@ public class ResourceService {
     // ===== MODERATION METHODS =====
     
     /**
-     * Approves a resource. Only admins can approve resources.
+     * Approves a resource. Only admins/moderators can approve resources.
      * Once approved, the resource becomes visible on course pages.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MODERATOR')")
     public ResourceDTO approveResource(Long resourceId, Long adminId) {
-        // Validate admin user
+        // Validate admin/moderator user
         User admin = userRepository.findById(adminId)
-            .orElseThrow(() -> new IllegalArgumentException("Admin user not found with id: " + adminId));
+            .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + adminId));
         
-        if (admin.getRole() != UserRole.ADMIN) {
-            throw new IllegalArgumentException("Only admins can approve resources");
+        if (admin.getRole() != UserRole.ADMIN && admin.getRole() != UserRole.MODERATOR) {
+            throw new IllegalArgumentException("Only admins and moderators can approve resources");
         }
         
         // Get resource
@@ -382,17 +409,17 @@ public class ResourceService {
     }
     
     /**
-     * Rejects a resource with a reason. Only admins can reject resources.
+     * Rejects a resource with a reason. Only admins/moderators can reject resources.
      * Rejected resources are not visible on course pages but remain accessible to the uploader.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MODERATOR')")
     public ResourceDTO rejectResource(Long resourceId, Long adminId, RejectResourceRequestDTO rejectRequest) {
-        // Validate admin user
+        // Validate admin/moderator user
         User admin = userRepository.findById(adminId)
-            .orElseThrow(() -> new IllegalArgumentException("Admin user not found with id: " + adminId));
+            .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + adminId));
         
-        if (admin.getRole() != UserRole.ADMIN) {
-            throw new IllegalArgumentException("Only admins can reject resources");
+        if (admin.getRole() != UserRole.ADMIN && admin.getRole() != UserRole.MODERATOR) {
+            throw new IllegalArgumentException("Only admins and moderators can reject resources");
         }
         
         // Get resource
@@ -511,7 +538,27 @@ public class ResourceService {
     
     // Private mapping methods
     
+    /**
+     * Maps a resource to the appropriate DTO based on user context.
+     * Automatically determines the correct view (public, owner, or admin).
+     */
+    private ResourceDTO mapToContextualDTO(Resource resource, Long currentUserId, boolean isAdminOrModerator) {
+        boolean isOwner = currentUserId != null && resource.getUploadedBy().getId().equals(currentUserId);
+        
+        if (isAdminOrModerator) {
+            return mapToAdminViewDTO(resource, isOwner, true);
+        } else if (isOwner) {
+            return mapToOwnerViewDTO(resource, true, false);
+        } else {
+            return mapToPublicViewDTO(resource, false, isAdminOrModerator);
+        }
+    }
+    
     private ResourceDTO mapToPublicViewDTO(Resource resource) {
+        return mapToPublicViewDTO(resource, false, false);
+    }
+    
+    private ResourceDTO mapToPublicViewDTO(Resource resource, boolean isOwner, boolean canModerate) {
         return ResourceDTO.forPublicView(
             resource.getId(),
             resource.getTitle(),
@@ -524,11 +571,17 @@ public class ResourceService {
             resource.getIsFileUpload(),
             resource.getFileName(),
             resource.getFileSize(),
-            resource.getMimeType()
+            resource.getMimeType(),
+            isOwner,
+            canModerate
         );
     }
     
     private ResourceDTO mapToOwnerViewDTO(Resource resource) {
+        return mapToOwnerViewDTO(resource, true, false);
+    }
+    
+    private ResourceDTO mapToOwnerViewDTO(Resource resource, boolean isOwner, boolean canModerate) {
         return ResourceDTO.forOwnerView(
             resource.getId(),
             resource.getTitle(),
@@ -544,11 +597,17 @@ public class ResourceService {
             resource.getIsFileUpload(),
             resource.getFileName(),
             resource.getFileSize(),
-            resource.getMimeType()
+            resource.getMimeType(),
+            isOwner,
+            canModerate
         );
     }
     
     private ResourceDTO mapToAdminViewDTO(Resource resource) {
+        return mapToAdminViewDTO(resource, false, true);
+    }
+    
+    private ResourceDTO mapToAdminViewDTO(Resource resource, boolean isOwner, boolean canModerate) {
         return ResourceDTO.forAdminView(
             resource.getId(),
             resource.getTitle(),
@@ -570,7 +629,9 @@ public class ResourceService {
             resource.getIsFileUpload(),
             resource.getFileName(),
             resource.getFileSize(),
-            resource.getMimeType()
+            resource.getMimeType(),
+            isOwner,
+            canModerate
         );
     }
     
